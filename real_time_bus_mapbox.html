@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <script src="https://api.mapbox.com/mapbox-gl-js/v1.11.0/mapbox-gl.js"></script>
+    <link href="https://api.mapbox.com/mapbox-gl-js/v1.11.0/mapbox-gl.css" rel="stylesheet" />
+    <style>
+        body { margin: 0; padding: 0; }
+        #map { position: absolute; top: 0; bottom: 0; width: 100%; }
+        .map-overlay{
+            position: absolute;
+            left: 0;
+            padding: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div id="map"></div>
+    <div class="map-overlay top">
+        <button style="font-size: 1em;" onclick="move()">
+          Created by Rodrigo Ochoa Mayagoitia
+        </button>
+      </div>
+      
+    <script>
+        
+        let map = 0
+        var markers = {};
+
+        // Load map
+        function init() {
+            map = new mapboxgl.Map({
+                container: 'map',
+                style: 'mapbox://styles/mapbox/dark-v11',
+                center: [-71.106067, 42.366806],
+                zoom: 14,
+                accessToken: 'pk.eyJ1Ijoicm9kcmlnb29jaG9hIiwiYSI6ImNsbWgxemRhNjAxNGEzbHFzc2gycW9ibHUifQ._P7hwNnfoPbPRzMjljhMyA',
+            });
+
+            addMarkers();
+        }
+
+        // Add bus markers to map
+        async function addMarkers() {
+            // Get bus data
+            var locations = await getBusLocations();
+
+            // Loop through data, add bus markers
+            locations.forEach(function (bus) {
+                var marker = getMarker(bus.id);
+                if (marker) {
+                    moveMarker(marker, bus);
+                } else {
+                    addMarker(bus);
+                }
+            });
+
+            // Timer
+            console.log(new Date());
+            setTimeout(addMarkers, 15000);
+        }
+
+        // Request bus data from MBTA
+        async function getBusLocations() {
+            var url = 'https://api-v3.mbta.com/vehicles?api_key=ca34f7b7ac8a445287cab52fb451030a&filter[route]=1&include=trip';
+            var response = await fetch(url);
+            var json = await response.json();
+            return json.data;
+        }
+
+        function addMarker(bus) {
+            var icon = getIcon(bus);
+            var el = document.createElement('div');
+            el.className = 'marker';
+            el.style.backgroundImage = `url(${icon})`;
+            el.style.width = '33px';
+            el.style.height = '36px';
+
+            var marker = new mapboxgl.Marker(el)
+                .setLngLat([bus.attributes.longitude, bus.attributes.latitude])
+                .addTo(map);
+
+            markers[bus.id] = marker;
+        }
+
+        function getIcon(bus) {
+            // Select icon based on bus direction
+            if (bus.attributes.direction_id === 0) {
+                return 'red.png'; // Replace with your icon URL
+            }
+            return 'blue.png'; // Replace with your icon URL
+        }
+
+        function moveMarker(marker, bus) {
+            // Change icon if bus has changed direction
+            var icon = getIcon(bus);
+            marker.getElement().style.backgroundImage = `url(${icon})`;
+
+            // Move marker to new lat/lon
+            marker.setLngLat([bus.attributes.longitude, bus.attributes.latitude]);
+        }
+
+        function getMarker(id) {
+            return markers[id];
+        }
+
+        map.on('load', init())
+    </script>
+</body>
+</html>
